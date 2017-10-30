@@ -59,6 +59,7 @@ module ActiveMerchant #:nodoc:
         "COP" => '170',
         "CRC" => '188',
         "CZK" => '203',
+        "DKK" => '208',
         "DOP" => '214',
         "EUR" => '978',
         "GBP" => '826',
@@ -84,7 +85,7 @@ module ActiveMerchant #:nodoc:
       # More operations are supported by the gateway itself, but
       # are not supported in this library.
       SUPPORTED_TRANSACTIONS = {
-        :purchase   => 'A',
+        :purchase   => '0',
         :authorize  => '1',
         :capture    => '2',
         :refund     => '3',
@@ -214,7 +215,13 @@ module ActiveMerchant #:nodoc:
         data = {}
         add_action(data, :capture)
         add_amount(data, money, options)
-        order_id, _, _ = split_authorization(authorization)
+
+        if options[:order_id]
+          order_id = options[:order_id]
+        else
+          order_id, _, _ = split_authorization(authorization)
+        end
+
         add_order(data, order_id)
         data[:description] = options[:description]
 
@@ -236,7 +243,13 @@ module ActiveMerchant #:nodoc:
         data = {}
         add_action(data, :refund)
         add_amount(data, money, options)
-        order_id, _, _ = split_authorization(authorization)
+
+        if options[:order_id]
+          order_id = options[:order_id]
+        else
+          order_id, _, _ = split_authorization(authorization)
+        end
+
         add_order(data, order_id)
         data[:description] = options[:description]
 
@@ -281,7 +294,8 @@ module ActiveMerchant #:nodoc:
       end
 
       def add_order(data, order_id)
-        data[:order_id] = clean_order_id(order_id)
+        #data[:order_id] = clean_order_id(order_id)
+        data[:order_id] = order_id
       end
 
       def url
@@ -508,8 +522,14 @@ module ActiveMerchant #:nodoc:
       end
 
       def xml_signed_fields(data)
-        data[:ds_amount] + data[:ds_order] + data[:ds_merchantcode] + data[:ds_currency] +
-          data[:ds_response] + data[:ds_transactiontype] + data[:ds_securepayment]
+        xml_signed_fields = data[:ds_amount] + data[:ds_order] + data[:ds_merchantcode] +
+          data[:ds_currency] + data[:ds_response]
+
+        if data[:ds_cardnumber]
+          xml_signed_fields += data[:ds_cardnumber]
+        end
+
+        xml_signed_fields += data[:ds_transactiontype] + data[:ds_securepayment]
       end
 
       def get_key(order_id)
